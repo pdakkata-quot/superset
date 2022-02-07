@@ -74,6 +74,7 @@ interface ResultSetProps {
   actions: Record<string, any>;
   cache?: boolean;
   csv?: boolean;
+  excel?: boolean;
   database?: Record<string, any>;
   displayLimit: number;
   height: number;
@@ -140,6 +141,7 @@ export default class ResultSet extends React.PureComponent<
   static defaultProps = {
     cache: false,
     csv: true,
+    excel: true,
     database: {},
     search: true,
     showSql: false,
@@ -165,30 +167,25 @@ export default class ResultSet extends React.PureComponent<
     this.fetchResults = this.fetchResults.bind(this);
     this.popSelectStar = this.popSelectStar.bind(this);
     this.reFetchQueryResults = this.reFetchQueryResults.bind(this);
-    this.toggleExploreResultsButton = this.toggleExploreResultsButton.bind(
-      this,
-    );
+    this.toggleExploreResultsButton =
+      this.toggleExploreResultsButton.bind(this);
     this.handleSaveInDataset = this.handleSaveInDataset.bind(this);
     this.handleHideSaveModal = this.handleHideSaveModal.bind(this);
     this.handleDatasetNameChange = this.handleDatasetNameChange.bind(this);
-    this.handleSaveDatasetRadioBtnState = this.handleSaveDatasetRadioBtnState.bind(
-      this,
-    );
+    this.handleSaveDatasetRadioBtnState =
+      this.handleSaveDatasetRadioBtnState.bind(this);
     this.handleOverwriteCancel = this.handleOverwriteCancel.bind(this);
     this.handleOverwriteDataset = this.handleOverwriteDataset.bind(this);
-    this.handleOverwriteDatasetOption = this.handleOverwriteDatasetOption.bind(
-      this,
-    );
+    this.handleOverwriteDatasetOption =
+      this.handleOverwriteDatasetOption.bind(this);
     this.handleSaveDatasetModalSearch = debounce(
       this.handleSaveDatasetModalSearch.bind(this),
       1000,
     );
-    this.handleFilterAutocompleteOption = this.handleFilterAutocompleteOption.bind(
-      this,
-    );
-    this.handleOnChangeAutoComplete = this.handleOnChangeAutoComplete.bind(
-      this,
-    );
+    this.handleFilterAutocompleteOption =
+      this.handleFilterAutocompleteOption.bind(this);
+    this.handleOnChangeAutoComplete =
+      this.handleOnChangeAutoComplete.bind(this);
     this.handleExploreBtnClick = this.handleExploreBtnClick.bind(this);
   }
 
@@ -443,12 +440,17 @@ export default class ResultSet extends React.PureComponent<
   }
 
   renderControls() {
-    if (this.props.search || this.props.visualize || this.props.csv) {
+    if (
+      this.props.search ||
+      this.props.visualize ||
+      this.props.csv ||
+      this.props.excel
+    ) {
       let { data } = this.props.query.results;
       if (this.props.cache && this.props.query.cached) {
         ({ data } = this.state);
       }
-
+      const { columns } = this.props.query.results;
       // Added compute logic to stop user from being able to Save & Explore
       const {
         saveDatasetRadioBtnState,
@@ -506,9 +508,16 @@ export default class ResultSet extends React.PureComponent<
                 <i className="fa fa-file-text-o" /> {t('Download to CSV')}
               </Button>
             )}
-
+            {this.props.excel && (
+              <Button
+                buttonSize="small"
+                href={`/superset/excel/${this.props.query.id}`}
+              >
+                <i className="fa fa-file-text-o" /> {t('.XLSX')}
+              </Button>
+            )}
             <CopyToClipboard
-              text={prepareCopyToClipboardTabularData(data)}
+              text={prepareCopyToClipboardTabularData(data, columns)}
               wrapped={false}
               copyNode={
                 <Button buttonSize="small">

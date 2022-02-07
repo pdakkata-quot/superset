@@ -16,6 +16,7 @@
 # under the License.
 import json
 import logging
+import pandas as pd
 from datetime import datetime
 from io import BytesIO
 from typing import Any, Dict, Optional
@@ -84,7 +85,7 @@ from superset.views.base_api import (
     RelatedFieldFilter,
     statsd_metrics,
 )
-from superset.views.core import CsvResponse, generate_download_headers
+from superset.views.core import CsvResponse, ExcelResponse, generate_download_headers
 from superset.views.filters import FilterRelatedOwners
 
 logger = logging.getLogger(__name__)
@@ -516,6 +517,22 @@ class ChartRestApi(BaseSupersetModelRestApi):
             # return the first result
             data = result["queries"][0]["data"]
             return CsvResponse(data, headers=generate_download_headers("csv"))
+        
+        if result_format == ChartDataResultFormat.EXCEL:
+            # return the first result
+            buf = BytesIO()
+            df = pd.DataFrame.from_dict(result["queries"][0]["data"])
+            print("\n\n\n\n\n",df)
+            include_index = not isinstance(df.index, pd.RangeIndex)
+            df.to_excel(buf, index=include_index)
+            filename = datetime.now().strftime("%Y%m%d_%H%M%S.xlsx")
+            buf.seek(0)
+            return send_file(
+                buf,
+                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                as_attachment=True,
+                attachment_filename=filename,
+            )
 
         if result_format == ChartDataResultFormat.JSON:
             response_data = simplejson.dumps(

@@ -83,6 +83,8 @@ from superset.views.base_api import (
 )
 from superset.views.filters import FilterRelatedOwners
 
+import pandas as pd
+
 logger = logging.getLogger(__name__)
 
 
@@ -704,31 +706,45 @@ class DashboardRestApi(BaseSupersetModelRestApi):
               $ref: '#/components/responses/500'
         """
         requested_ids = kwargs["rison"]
-
+        print("ids..",requested_ids)
+        # if(True):
         if is_feature_enabled("VERSIONED_EXPORT"):
             token = request.args.get("token")
             timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
             root = f"dashboard_export_{timestamp}"
-            filename = f"{root}.zip"
+            # filename = f"{root}.zip"
 
             buf = BytesIO()
-            with ZipFile(buf, "w") as bundle:
-                try:
-                    for file_name, file_content in ExportDashboardsCommand(
-                        requested_ids
-                    ).run():
-                        with bundle.open(f"{root}/{file_name}", "w") as fp:
-                            fp.write(file_content.encode())
-                except DashboardNotFoundError:
-                    return self.response_404()
+            # print("\n\n\n\n\nhereee",result)
+            df = pd.DataFrame.from_dict(result["queries"][0]["data"])
+            print("\n\n\n\n\nhereee",df)
+            include_index = not isinstance(df.index, pd.RangeIndex)
+            df.to_excel(buf, index=include_index)
+            filename = datetime.now().strftime("%Y%m%d_%H%M%S.xlsx")
             buf.seek(0)
-
             response = send_file(
                 buf,
-                mimetype="application/zip",
+                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 as_attachment=True,
                 attachment_filename=filename,
             )
+            # with ZipFile(buf, "w") as bundle:
+            #     try:
+            #         for file_name, file_content in ExportDashboardsCommand(
+            #             requested_ids
+            #         ).run():
+            #             with bundle.open(f"{root}/{file_name}", "w") as fp:
+            #                 fp.write(file_content.encode())
+            #     except DashboardNotFoundError:
+            #         return self.response_404()
+            # buf.seek(0)
+
+            # response = send_file(
+            #     buf,
+            #     mimetype="application/zip",
+            #     as_attachment=True,
+            #     attachment_filename=filename,
+            # )
             if token:
                 response.set_cookie(token, "done", max_age=600)
             return response
@@ -738,11 +754,13 @@ class DashboardRestApi(BaseSupersetModelRestApi):
         )
         query = self._base_filters.apply_all(query)
         ids = [item.id for item in query.all()]
+        print("ids...",ids)
         if not ids:
             return self.response_404()
         export = Dashboard.export_dashboards(ids)
+        print("resp",export)
         resp = make_response(export, 200)
-        resp.headers["Content-Disposition"] = generate_download_headers("json")[
+        resp.headers["Content-Disposition"] = generate_download_headers("xlsx")[
             "Content-Disposition"
         ]
         return resp

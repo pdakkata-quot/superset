@@ -28,6 +28,7 @@ import {
   LOG_ACTIONS_CHANGE_DASHBOARD_FILTER,
   LOG_ACTIONS_EXPLORE_DASHBOARD_CHART,
   LOG_ACTIONS_EXPORT_CSV_DASHBOARD_CHART,
+  LOG_ACTIONS_EXPORT_EXCEL_DASHBOARD_CHART,
   LOG_ACTIONS_FORCE_REFRESH_CHART,
 } from 'src/logger/LogUtils';
 import { areObjectsEqual } from 'src/reduxUtils';
@@ -71,6 +72,7 @@ const propTypes = {
   supersetCanExplore: PropTypes.bool.isRequired,
   supersetCanShare: PropTypes.bool.isRequired,
   supersetCanCSV: PropTypes.bool.isRequired,
+  supersetCanExcel: PropTypes.bool.isRequired,
   sliceCanEdit: PropTypes.bool.isRequired,
   addSuccessToast: PropTypes.func.isRequired,
   addDangerToast: PropTypes.func.isRequired,
@@ -112,6 +114,7 @@ export default class Chart extends React.Component {
     this.handleFilterMenuOpen = this.handleFilterMenuOpen.bind(this);
     this.handleFilterMenuClose = this.handleFilterMenuClose.bind(this);
     this.exportCSV = this.exportCSV.bind(this);
+    this.exportExcel = this.exportExcel.bind(this);
     this.exportFullCSV = this.exportFullCSV.bind(this);
     this.forceRefresh = this.forceRefresh.bind(this);
     this.resize = this.resize.bind(this);
@@ -245,6 +248,18 @@ export default class Chart extends React.Component {
     });
   }
 
+  exportExcel() {
+    this.props.logEvent(LOG_ACTIONS_EXPORT_EXCEL_DASHBOARD_CHART, {
+      slice_id: this.props.slice.slice_id,
+      is_cached: this.props.isCached,
+    });
+    exportChart({
+      formData: this.props.formData,
+      resultType: 'results',
+      resultFormat: 'excel',
+    });
+  }
+
   exportFullCSV() {
     this.exportCSV(true);
   }
@@ -280,6 +295,7 @@ export default class Chart extends React.Component {
       supersetCanExplore,
       supersetCanShare,
       supersetCanCSV,
+      supersetCanExcel,
       sliceCanEdit,
       addSuccessToast,
       addDangerToast,
@@ -332,12 +348,14 @@ export default class Chart extends React.Component {
           logExploreChart={this.logExploreChart}
           exploreUrl={this.getChartUrl()}
           exportCSV={this.exportCSV}
+          exportExcel={this.exportExcel}
           exportFullCSV={this.exportFullCSV}
           updateSliceName={updateSliceName}
           sliceName={sliceName}
           supersetCanExplore={supersetCanExplore}
           supersetCanShare={supersetCanShare}
           supersetCanCSV={supersetCanCSV}
+          supersetCanExcel={supersetCanExcel}
           sliceCanEdit={sliceCanEdit}
           componentId={componentId}
           dashboardId={dashboardId}

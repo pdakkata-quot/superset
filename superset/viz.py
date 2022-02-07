@@ -22,6 +22,7 @@ Superset can render.
 """
 import copy
 import inspect
+import io
 import logging
 import math
 import re
@@ -450,7 +451,8 @@ class BaseViz:
 
         payload = self.get_df_payload(query_obj)
 
-        df = payload.get("df")
+        # if payload does not have a df, we are raising an error here.
+        df = cast(Optional[pd.DataFrame], payload["df"])
 
         if self.status != utils.QueryStatus.FAILED:
             payload["data"] = self.get_data(df)
@@ -482,7 +484,8 @@ class BaseViz:
             for col in filter_columns
             if col not in columns and col not in filter_values_columns
         ] + rejected_time_columns
-
+        if df is not None:
+            payload["colnames"] = list(df.columns)
         return payload
 
     def get_df_payload(
@@ -622,6 +625,15 @@ class BaseViz:
         df = self.get_df_payload()["df"]  # leverage caching logic
         include_index = not isinstance(df.index, pd.RangeIndex)
         return csv.df_to_escaped_csv(df, index=include_index, **config["CSV_EXPORT"])
+
+    def get_excel(self) -> Optional[str]:
+        data = io.BytesIO()
+        df = self.get_df()
+        include_index = not isinstance(df.index, pd.RangeIndex)
+        
+        df.to_excel(data, index=include_index, **config.get("EXCEL_EXPORT"))
+        data.seek(0)
+        return data  # .read()
 
     def get_data(self, df: pd.DataFrame) -> VizData:
         return df.to_dict(orient="records")
@@ -2107,7 +2119,7 @@ class FilterBoxViz(BaseViz):
                         for row in df.itertuples(index=False)
                     ]
             else:
-                df[col] = []
+                d[col] = []
         return d
 
 

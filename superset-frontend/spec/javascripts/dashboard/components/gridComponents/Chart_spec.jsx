@@ -61,6 +61,7 @@ describe('Chart', () => {
     addSuccessToast() {},
     addDangerToast() {},
     exportCSV() {},
+    exportExcel() {},
     exportFullCSV() {},
     componentId: 'test',
     dashboardId: 111,
@@ -68,6 +69,7 @@ describe('Chart', () => {
     isExpanded: false,
     supersetCanExplore: false,
     supersetCanCSV: false,
+    supersetCanExcel: false,
     sliceCanEdit: false,
   };
 

@@ -16,6 +16,7 @@
 # under the License.
 # pylint: disable=comparison-with-callable, line-too-long, too-many-branches
 import dataclasses
+import io
 import logging
 import re
 from contextlib import closing
@@ -117,6 +118,7 @@ from superset.views.base import (
     common_bootstrap_payload,
     create_table_permissions,
     CsvResponse,
+    ExcelResponse,
     data_payload_response,
     generate_download_headers,
     get_error_msg,
@@ -449,6 +451,11 @@ class Superset(BaseSupersetView):  # pylint: disable=too-many-public-methods
         if response_type == utils.ChartDataResultFormat.CSV:
             return CsvResponse(
                 viz_obj.get_csv(), headers=generate_download_headers("csv")
+            )
+        
+        if response_type == utils.ChartDataResultFormat.EXCEL:
+            return ExcelResponse(
+                viz_obj.get_excel(), headers=generate_download_headers("xlsx")
             )
 
         if response_type == utils.ChartDataResultType.QUERY:
@@ -2833,6 +2840,59 @@ class Superset(BaseSupersetView):  # pylint: disable=too-many-public-methods
         logger.debug(
             "CSV exported: %s", event_rep, extra={"superset_event": event_info}
         )
+        return response
+
+    @has_access
+    @event_logger.log_this
+    @expose("/excel/<client_id>")
+    def excel(self, client_id: str) -> FlaskResponse:  # pylint: disable=no-self-use
+        """Download the query results as Excel."""
+        logger.info("Exporting Excel file [%s]", client_id)
+        query = db.session.query(Query).filter_by(client_id=client_id).one()
+
+        try:
+            query.raise_for_access()
+        except SupersetSecurityException as ex:
+            flash(ex.error.message)
+            return redirect("/")
+
+        blob = None
+        if results_backend and query.results_key:
+            logger.info("Fetching Excel from results backend [%s]", query.results_key)
+            blob = results_backend.get(query.results_key)
+        if blob:
+            logger.info("Decompressing")
+            payload = utils.zlib_decompress(
+                blob, decode=not results_backend_use_msgpack
+            )
+            obj = _deserialize_results_payload(
+                payload, query, cast(bool, results_backend_use_msgpack)
+            )
+            columns = [c["name"] for c in obj["columns"]]
+            df = pd.DataFrame.from_records(obj["data"], columns=columns)
+            logger.info("Using pandas to convert to Excel")
+        else:
+            logger.info("Running a query to turn into Excel")
+            sql = query.select_sql or query.executed_sql
+            df = query.database.get_df(sql, query.schema)
+        buf = io.BytesIO()
+        df.to_excel(buf, index=False)
+        buf.seek(0)
+        quoted_excel_name = parse.quote(query.name)
+        response = ExcelResponse(
+            buf.read(), headers=generate_download_headers("xlsx", quoted_excel_name)
+        )
+        event_info = {
+            "event_type": "data_export",
+            "client_id": client_id,
+            "row_count": len(df.index),
+            "database": query.database.name,
+            "schema": query.schema,
+            "sql": query.sql,
+            "exported_format": "excel",
+        }
+        event_rep = repr(event_info)
+        logger.info("Excel exported: %s", event_rep, extra={"superset_event": event_info})
         return response
 
     @api

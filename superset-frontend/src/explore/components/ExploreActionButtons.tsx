@@ -49,14 +49,8 @@ type ExploreActionButtonsProps = {
 };
 
 const ActionButton = (props: ActionButtonProps) => {
-  const {
-    icon,
-    text,
-    tooltip,
-    className,
-    onTooltipVisibilityChange,
-    ...rest
-  } = props;
+  const { icon, text, tooltip, className, onTooltipVisibilityChange, ...rest } =
+    props;
   return (
     <Tooltip
       id={`${icon}-tooltip`}
@@ -129,6 +123,14 @@ const ExploreActionButtons = (props: ExploreActionButtonsProps) => {
       })
     : null;
 
+  const doExportExcel = canDownloadCSV
+    ? exportChart.bind(this, {
+        formData: latestQueryFormData,
+        resultType: 'results',
+        resultFormat: 'excel',
+      })
+    : null;
+
   const doExportJson = exportChart.bind(this, {
     formData: latestQueryFormData,
     resultType: 'results',
@@ -136,6 +138,10 @@ const ExploreActionButtons = (props: ExploreActionButtonsProps) => {
   });
 
   const exportToCSVClasses = cx('btn btn-default btn-sm', {
+    disabled: !canDownloadCSV,
+  });
+
+  const exportToExcelClasses = cx('btn btn-default btn-sm', {
     disabled: !canDownloadCSV,
   });
 
@@ -174,6 +180,13 @@ const ExploreActionButtons = (props: ExploreActionButtonsProps) => {
             tooltip={t('Export to .CSV format')}
             onClick={doExportCSV}
             className={exportToCSVClasses}
+          />
+          <ActionButton
+            icon={<Icons.FileExcelOutlined iconSize="m" />}
+            text=".XLSX"
+            tooltip={t('Export to .XLSX format')}
+            onClick={doExportExcel}
+            className={exportToExcelClasses}
           />
         </>
       )}

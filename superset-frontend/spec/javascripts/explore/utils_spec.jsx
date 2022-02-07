@@ -87,6 +87,18 @@ describe('exploreUtils', () => {
         URI('/superset/explore_json/').search({ csv: 'true' }),
       );
     });
+    it('generates proper excel URL', () => {
+      const url = getExploreUrl({
+        formData,
+        endpointType: 'excel',
+        force: false,
+        curUrl: 'superset.com',
+      });
+      compareURI(
+        URI(url),
+        URI('/superset/explore_json/').search({ excel: 'true' }),
+      );
+    });
     it('generates proper standalone URL', () => {
       const url = getExploreUrl({
         formData,
@@ -182,12 +194,23 @@ describe('exploreUtils', () => {
         endpointType: 'csv',
       });
       expect(csvURL).toMatch(availableDomains[0]);
+      let excelURL = getExploreUrl({
+        formData,
+        endpointType: 'excel',
+      });
+      expect(excelURL).toMatch(availableDomains[0]);
 
       csvURL = getExploreUrl({
         formData,
         endpointType: 'csv',
       });
       expect(csvURL).toMatch(availableDomains[0]);
+
+      excelURL = getExploreUrl({
+        formData,
+        endpointType: 'excel',
+      });
+      expect(excelURL).toMatch(availableDomains[0]);
     });
   });
 
